@@ -97,9 +97,11 @@ def signup():
 
 @app.route('/login', methods=["GET", "POST"])
 def login():
-    breakpoint()
     """Handle user login and redirect to homepage on success."""
     form = LoginForm()
+
+    # if CURR_USER_KEY in session:
+    #     return redirect(f"/users/{session[CURR_USER_KEY]}")
 
     if form.validate_on_submit():
         user = User.authenticate(
@@ -110,13 +112,13 @@ def login():
         if user:
             do_login(user)
             flash(f"Hello, {user.username}!", "success")
-            return redirect("/")
+            return redirect(f"/users/{user.id}")
 
         flash("Invalid credentials.", 'danger')
 
     return render_template('users/login.html', form=form)
 
-
+#FIXME: logout not working!
 @app.post('/logout')
 def logout():
     """Handle logout of user and redirect to homepage."""
@@ -126,13 +128,9 @@ def logout():
     if form.validate_on_submit():
         # Remove user if present, but no errors if it wasn't
         flash('You are now logged out')
-        session.pop("CURR_USER_KEY", None)
+        session.pop(CURR_USER_KEY)
 
-        return redirect('/login')
-    else:
-        # Handle invalid submission
-        raise Unauthorized()
-
+    return redirect('/')
 
 ##############################################################################
 # General user routes:
@@ -325,7 +323,7 @@ def homepage():
     - anon users: no messages
     - logged in: 100 most recent messages of self & followed_users
     """
-
+    form = CSRFForm()
     if g.user:
         messages = (Message
                     .query
@@ -333,7 +331,7 @@ def homepage():
                     .limit(100)
                     .all())
 
-        return render_template('home.html', messages=messages)
+        return render_template('home.html', messages=messages, form=form)
 
     else:
         return render_template('home-anon.html')
