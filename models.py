@@ -43,48 +43,48 @@ class User(db.Model):
 
     id = db.Column(
         db.Integer,
-        primary_key=True,
+        primary_key=True
     )
 
     email = db.Column(
         db.String(50),
         nullable=False,
-        unique=True,
+        unique=True
     )
 
     username = db.Column(
         db.String(30),
         nullable=False,
-        unique=True,
+        unique=True
     )
 
     image_url = db.Column(
         db.String(255),
         nullable=False,
-        default=DEFAULT_IMAGE_URL,
+        default=DEFAULT_IMAGE_URL
     )
 
     header_image_url = db.Column(
         db.String(255),
         nullable=False,
-        default=DEFAULT_HEADER_IMAGE_URL,
+        default=DEFAULT_HEADER_IMAGE_URL
     )
 
     bio = db.Column(
         db.Text,
         nullable=False,
-        default="",
+        default=""
     )
 
     location = db.Column(
         db.String(30),
         nullable=False,
-        default="",
+        default=""
     )
 
     password = db.Column(
         db.String(100),
-        nullable=False,
+        nullable=False
     )
 
     messages = db.relationship('Message', backref="user")
@@ -94,7 +94,7 @@ class User(db.Model):
         secondary="follows",
         primaryjoin=(Follow.user_being_followed_id == id),
         secondaryjoin=(Follow.user_following_id == id),
-        backref="following",
+        backref="following"
     )
 
     def __repr__(self):
@@ -113,7 +113,7 @@ class User(db.Model):
             username=username,
             email=email,
             password=hashed_pwd,
-            image_url=image_url,
+            image_url=image_url
         )
 
         db.session.add(user)

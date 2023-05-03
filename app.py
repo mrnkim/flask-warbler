@@ -4,8 +4,9 @@ from dotenv import load_dotenv
 from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
+from werkzeug.exceptions import Unauthorized
 
-from forms import UserAddForm, LoginForm, MessageForm
+from forms import UserAddForm, LoginForm, MessageForm, CSRFForm
 from models import db, connect_db, User, Message, Follow
 
 load_dotenv()
@@ -16,7 +17,7 @@ app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 app.config['SQLALCHEMY_ECHO'] = False
-app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
+app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
 toolbar = DebugToolbarExtension(app)
 
@@ -51,6 +52,8 @@ def do_logout():
         del session[CURR_USER_KEY]
 
 
+
+
 @app.route('/signup', methods=["GET", "POST"])
 def signup():
     """Handle user signup.
@@ -62,8 +65,10 @@ def signup():
     If the there already is a user with that username: flash message
     and re-present form.
     """
-
     do_logout()
+
+    if CURR_USER_KEY in session:
+        return redirect(f"/users/{session[CURR_USER_KEY]}")
 
     form = UserAddForm()
 
@@ -75,7 +80,9 @@ def signup():
                 email=form.email.data,
                 image_url=form.image_url.data or User.image_url.default.arg,
             )
+
             db.session.commit()
+            session[CURR_USER_KEY] = user.username
 
         except IntegrityError:
             flash("Username already taken", 'danger')
@@ -114,10 +121,17 @@ def login():
 def logout():
     """Handle logout of user and redirect to homepage."""
 
-    form = g.csrf_form
+    form = CSRFForm()
 
-    # IMPLEMENT THIS AND FIX BUG
-    # DO NOT CHANGE METHOD ON ROUTE
+    if form.validate_on_submit():
+        # Remove user if present, but no errors if it wasn't
+        flash('You are now logged out')
+        session.pop("CURR_USER_KEY", None)
+
+        return redirect('/login')
+    else:
+        # Handle invalid submission
+        raise Unauthorized()
 
 
 ##############################################################################
