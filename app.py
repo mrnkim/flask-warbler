@@ -57,11 +57,8 @@ def do_logout():
 @app.route('/signup', methods=["GET", "POST"])
 def signup():
     """Handle user signup.
-
     Create new user and add to DB. Redirect to home page.
-
     If form not valid, present form.
-
     If the there already is a user with that username: flash message
     and re-present form.
     """
@@ -142,7 +139,6 @@ def logout():
 @app.get('/users')
 def list_users():
     """Page with listing of users.
-
     Can take a 'q' param in querystring to search by that username.
     """
 
@@ -208,7 +204,6 @@ def show_followers(user_id):
 @app.post('/users/follow/<int:follow_id>')
 def start_following(follow_id):
     """Add a follow for the currently-logged-in user.
-
     Redirect to following page for the current for the current user.
     """
     # TODO: clarify use of CSRF token on functions such as this
@@ -228,7 +223,6 @@ def start_following(follow_id):
 @app.post('/users/stop-following/<int:follow_id>')
 def stop_following(follow_id):
     """Have currently-logged-in-user stop following this user.
-
     Redirect to following page for the current for the current user.
     """
 
@@ -248,12 +242,16 @@ def profile():
     """Update profile for current user."""
 
     # IMPLEMENT THIS
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    # show form
 
 
 @app.post('/users/delete')
 def delete_user():
     """Delete user.
-
     Redirect to signup page.
     """
 
@@ -275,7 +273,6 @@ def delete_user():
 @app.route('/messages/new', methods=["GET", "POST"])
 def add_message():
     """Add a message:
-
     Show form if GET. If valid, update message and redirect to user page.
     """
 
@@ -312,7 +309,6 @@ def show_message(message_id):
 @app.post('/messages/<int:message_id>/delete')
 def delete_message(message_id):
     """Delete a message.
-
     Check that this message was written by the current user.
     Redirect to user page on success.
     """
@@ -335,7 +331,6 @@ def delete_message(message_id):
 @app.get('/')
 def homepage():
     """Show homepage:
-
     - anon users: no messages
     - logged in: 100 most recent messages of self & followed_users
     """
