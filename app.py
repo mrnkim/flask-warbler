@@ -6,7 +6,7 @@ from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 from werkzeug.exceptions import Unauthorized
 
-from forms import UserAddForm, LoginForm, MessageForm, CSRFForm, ProfileEditForm
+from forms import UserAddForm, LoginForm, MessageForm, CSRFForm, UserEditForm
 from models import db, connect_db, User, Message, Follow
 
 load_dotenv()
@@ -241,28 +241,59 @@ def stop_following(follow_id):
 def profile():
     """Update profile for current user."""
 
-    # IMPLEMENT THIS
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    edit_form = ProfileEditForm(obj=g.user)
+    edit_form = UserEditForm(obj=g.user)
 
     csrf = CSRFForm()
 
     if edit_form.validate_on_submit():
-        g.user.username=edit_form.username.data,
-        g.user.email=edit_form.email.data,
-        g.user.image_url=edit_form.image_url.data,
-        g.user.header_image_url=edit_form.header_image_url.data,
-        g.user.bio=edit_form.bio.data,
-        g.user.password=edit_form.password.data
+        if User.authenticate(g.user.password, edit_form.password.data): 
+            g.user.username = edit_form.username.data
+            g.user.email = edit_form.email.data
+            g.user.image_url = edit_form.image_url.data
+            g.user.header_image_url = edit_form.header_image_url.data
+            g.user.bio = edit_form.bio.data
 
-        db.session.commit()
+            db.session.commit()
 
-        return redirect(f'/users/{g.user.id}')
+            return redirect(f'/users/{g.user.id}')
+        else:
+            edit_form.password.errors.append("Invalid password")
+            return render_template('users/edit.html', form=edit_form, csrf=csrf)
 
-    return render_template(f'users/edit.html', form=edit_form, csrf=csrf)
+    return render_template('users/edit.html', form=edit_form, csrf=csrf)
+
+# def profile():
+#     """Update profile for current user."""
+
+#     # IMPLEMENT THIS
+#     if not g.user:
+#         flash("Access unauthorized.", "danger")
+#         return redirect("/")
+
+#     edit_form = UserEditForm(obj=g.user)
+
+#     csrf = CSRFForm()
+
+#     if edit_form.validate_on_submit():
+
+#         if User.authenticate(g.user.username, edit_form.password.data):
+#             g.user.username=edit_form.username.data,
+#             g.user.email=edit_form.email.data,
+#             g.user.image_url=edit_form.image_url.data,
+#             g.user.header_image_url=edit_form.header_image_url.data,
+#             g.user.bio=edit_form.bio.data,
+#             g.user.password=edit_form.password.data
+
+#             db.session.commit()
+#             return redirect(f'/users/{g.user.id}')
+#         else:
+#             flash("Invalid password")
+
+#     return render_template(f'users/edit.html', form=edit_form, csrf=csrf)
 
 
 @app.post('/users/delete')
