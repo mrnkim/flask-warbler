@@ -250,7 +250,7 @@ def profile():
     csrf = CSRFForm()
 
     if edit_form.validate_on_submit():
-        if User.authenticate(g.user.password, edit_form.password.data): 
+        if User.authenticate(g.user.username, edit_form.password.data):
             g.user.username = edit_form.username.data
             g.user.email = edit_form.email.data
             g.user.image_url = edit_form.image_url.data
@@ -266,34 +266,6 @@ def profile():
 
     return render_template('users/edit.html', form=edit_form, csrf=csrf)
 
-# def profile():
-#     """Update profile for current user."""
-
-#     # IMPLEMENT THIS
-#     if not g.user:
-#         flash("Access unauthorized.", "danger")
-#         return redirect("/")
-
-#     edit_form = UserEditForm(obj=g.user)
-
-#     csrf = CSRFForm()
-
-#     if edit_form.validate_on_submit():
-
-#         if User.authenticate(g.user.username, edit_form.password.data):
-#             g.user.username=edit_form.username.data,
-#             g.user.email=edit_form.email.data,
-#             g.user.image_url=edit_form.image_url.data,
-#             g.user.header_image_url=edit_form.header_image_url.data,
-#             g.user.bio=edit_form.bio.data,
-#             g.user.password=edit_form.password.data
-
-#             db.session.commit()
-#             return redirect(f'/users/{g.user.id}')
-#         else:
-#             flash("Invalid password")
-
-#     return render_template(f'users/edit.html', form=edit_form, csrf=csrf)
 
 
 @app.post('/users/delete')
@@ -384,9 +356,12 @@ def homepage():
 
     csrf = CSRFForm()
 
+    following_ids = [user.id for user in g.user.following]+[g.user.id]
+
     if g.user:
         messages = (Message
                     .query
+                    .filter(Message.user_id.in_(following_ids))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
