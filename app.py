@@ -334,6 +334,20 @@ def delete_message(message_id):
 
     return redirect(f"/users/{g.user.id}")
 
+@app.post('/messages/<int:message_id>/like')
+def like_message(message_id):
+    """Like a message.
+    Check that this message was not written by the current user.
+    Fill star on liked message.
+    """
+
+    if not g.user or not g.csrf.validate_on_submit():
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    
+
+
 
 ##############################################################################
 # Homepage and error pages
