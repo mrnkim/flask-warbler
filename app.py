@@ -38,6 +38,10 @@ def add_user_to_g():
     else:
         g.user = None
 
+def add_csrf_to_g():
+    """Add csrf form"""
+    g.csrf = CSRFForm()
+
 
 def do_login(user):
     """Log in user."""
@@ -69,8 +73,6 @@ def signup():
 
     form = UserAddForm()
 
-    csrf = CSRFForm()
-
     if form.validate_on_submit():
         try:
             user = User.signup(
@@ -81,11 +83,11 @@ def signup():
             )
 
             db.session.commit()
-            session[CURR_USER_KEY] = user.username
+            session[CURR_USER_KEY] = user.username #keeps user logged in
 
         except IntegrityError:
             flash("Username already taken", 'danger')
-            return render_template('users/signup.html', form=form, csrf=csrf)
+            return render_template('users/signup.html', form=form)
 
         do_login(user)
 
@@ -100,8 +102,6 @@ def login():
 
     form = LoginForm()
 
-    csrf = CSRFForm()
-
     if form.validate_on_submit():
         user = User.authenticate(
             form.username.data,
@@ -115,16 +115,15 @@ def login():
 
         flash("Invalid credentials.", 'danger')
 
-    return render_template('users/login.html', form=form, csrf=csrf)
+    return render_template('users/login.html', form=form)
 
-#FIXME: logout not working!
 @app.post('/logout')
 def logout():
     """Handle logout of user and redirect to homepage."""
 
-    csrf = CSRFForm()
-
-    if csrf.validate_on_submit():
+#FIXME: remove all csrfs, change in .htmls
+#FIXME: if not validated, if not g.user -> refer to line 194~ ("guard")
+    if g.csrf.validate_on_submit():
         # Remove user if present, but no errors if it wasn't
         flash('You are now logged out')
         session.pop(CURR_USER_KEY)
@@ -142,8 +141,6 @@ def list_users():
     Can take a 'q' param in querystring to search by that username.
     """
 
-    csrf = CSRFForm()
-
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
@@ -155,50 +152,44 @@ def list_users():
     else:
         users = User.query.filter(User.username.like(f"%{search}%")).all()
 
-    return render_template('users/index.html', users=users, csrf=csrf)
+    return render_template('users/index.html', users=users)
 
 
 @app.get('/users/<int:user_id>')
 def show_user(user_id):
     """Show user profile."""
 
-    csrf = CSRFForm()
-
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
     user = User.query.get_or_404(user_id)
 
-    return render_template('users/show.html', user=user, csrf=csrf)
+    return render_template('users/show.html', user=user)
 
 
 @app.get('/users/<int:user_id>/following')
 def show_following(user_id):
     """Show list of people this user is following."""
 
-    csrf = CSRFForm()
-
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
     user = User.query.get_or_404(user_id)
-    return render_template('users/following.html', user=user, csrf=csrf)
+    return render_template('users/following.html', user=user)
 
 
 @app.get('/users/<int:user_id>/followers')
 def show_followers(user_id):
     """Show list of followers of this user."""
 
-    csrf = CSRFForm()
-
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
     user = User.query.get_or_404(user_id)
-    return render_template('users/followers.html', user=user, csrf=csrf)
+    return render_template('users/followers.html', user=user)
 
 
 @app.post('/users/follow/<int:follow_id>')
@@ -208,8 +199,9 @@ def start_following(follow_id):
     """
     # TODO: clarify use of CSRF token on functions such as this
     # csrf = CSRFForm()
+    #FIXME: csrf for all POST requests that don't have form naturally
 
-    if not g.user:
+    if not g.user or not g.csrf.validate_on_submit():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
@@ -226,7 +218,7 @@ def stop_following(follow_id):
     Redirect to following page for the current for the current user.
     """
 
-    if not g.user:
+    if not g.user or not g.csrf.validate_on_submit():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
@@ -247,8 +239,6 @@ def profile():
 
     edit_form = UserEditForm(obj=g.user)
 
-    csrf = CSRFForm()
-
     if edit_form.validate_on_submit():
         if User.authenticate(g.user.username, edit_form.password.data):
             g.user.username = edit_form.username.data
@@ -262,9 +252,9 @@ def profile():
             return redirect(f'/users/{g.user.id}')
         else:
             edit_form.password.errors.append("Invalid password")
-            return render_template('users/edit.html', form=edit_form, csrf=csrf)
+            return render_template('users/edit.html', form=edit_form)
 
-    return render_template('users/edit.html', form=edit_form, csrf=csrf)
+    return render_template('users/edit.html', form=edit_form)
 
 
 
@@ -274,7 +264,7 @@ def delete_user():
     Redirect to signup page.
     """
 
-    if not g.user:
+    if not g.user or not g.csrf.validate_on_submit():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
@@ -295,13 +285,11 @@ def add_message():
     Show form if GET. If valid, update message and redirect to user page.
     """
 
-    if not g.user:
+    if not g.user or not g.csrf.validate_on_submit():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
     form = MessageForm()
-
-    csrf = CSRFForm()
 
     if form.validate_on_submit():
         msg = Message(text=form.text.data)
@@ -310,7 +298,7 @@ def add_message():
 
         return redirect(f"/users/{g.user.id}")
 
-    return render_template('messages/create.html', form=form, csrf=csrf)
+    return render_template('messages/create.html', form=form)
 
 
 @app.get('/messages/<int:message_id>')
@@ -332,7 +320,7 @@ def delete_message(message_id):
     Redirect to user page on success.
     """
 
-    if not g.user:
+    if not g.user or not g.csrf.validate_on_submit():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
@@ -353,12 +341,9 @@ def homepage():
     - anon users: no messages
     - logged in: 100 most recent messages of self & followed_users
     """
-
-    csrf = CSRFForm()
-
-    following_ids = [user.id for user in g.user.following]+[g.user.id]
-
     if g.user:
+        following_ids = [user.id for user in g.user.following]+[g.user.id]
+
         messages = (Message
                     .query
                     .filter(Message.user_id.in_(following_ids))
@@ -366,7 +351,7 @@ def homepage():
                     .limit(100)
                     .all())
 
-        return render_template('home.html', messages=messages, csrf=csrf)
+        return render_template('home.html', messages=messages)
 
     else:
         return render_template('home-anon.html')
