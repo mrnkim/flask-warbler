@@ -84,7 +84,6 @@ def signup():
             )
 
             db.session.commit()
-            session[CURR_USER_KEY] = user.username #keeps user logged in
 
         except IntegrityError:
             flash("Username already taken", 'danger')
@@ -97,6 +96,7 @@ def signup():
     else:
         return render_template('users/signup.html', form=form)
 
+#FIXME: AttributeError: 'bool' object has no attribute 'id'
 @app.route('/login', methods=["GET", "POST"])
 def login():
     """Handle user login and redirect to homepage on success."""
@@ -124,14 +124,14 @@ def logout():
 
 #FIXME: remove all csrfs, change in .htmls
 #FIXME: if not validated, if not g.user -> refer to line 194~ ("guard")
-    if g.csrf.validate_on_submit():
+    if not g.user or not g.csrf.validate_on_submit():
         # Remove user if present, but no errors if it wasn't
-        flash('You are now logged out')
-        session.pop(CURR_USER_KEY)
+        flash("Access unauthorized.", "danger")
+        return redirect('/')
 
-        return redirect('/login')
-
-    # return redirect('/')
+    flash('You are now logged out')
+    do_logout()
+    return redirect('/login')
 
 ##############################################################################
 # General user routes:
@@ -231,7 +231,7 @@ def stop_following(follow_id):
 
 
 @app.route('/users/profile', methods=["GET", "POST"])
-def profile():
+def show_profile():
     """Update profile for current user."""
 
     # TODO: Why is 'if not g.user or not g.csrf.validate_on_submit():' not working here?
@@ -245,15 +245,15 @@ def profile():
         if User.authenticate(g.user.username, edit_form.password.data):
             g.user.username = edit_form.username.data
             g.user.email = edit_form.email.data
-            g.user.image_url = edit_form.image_url.data
-            g.user.header_image_url = edit_form.header_image_url.data
+            g.user.image_url = edit_form.image_url.data #TODO: or DEFAULT
+            g.user.header_image_url = edit_form.header_image_url.data #TODO: or DEFAULT
             g.user.bio = edit_form.bio.data
 
             db.session.commit()
 
             return redirect(f'/users/{g.user.id}')
-        else:
-            edit_form.password.errors.append("Invalid password")
+
+        edit_form.password.errors.append("Invalid password")
 
     return render_template('users/edit.html', form=edit_form)
 
@@ -288,7 +288,7 @@ def add_message():
     Show form if GET. If valid, update message and redirect to user page.
     """
 
-    if not g.user or not g.csrf.validate_on_submit():
+    if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
@@ -327,6 +327,7 @@ def delete_message(message_id):
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
+    #FIXME: add validation to check if message owner = g.user
     msg = Message.query.get_or_404(message_id)
     db.session.delete(msg)
     db.session.commit()
