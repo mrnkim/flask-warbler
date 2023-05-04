@@ -38,6 +38,7 @@ def add_user_to_g():
     else:
         g.user = None
 
+@app.before_request
 def add_csrf_to_g():
     """Add csrf form"""
     g.csrf = CSRFForm()
@@ -233,6 +234,7 @@ def stop_following(follow_id):
 def profile():
     """Update profile for current user."""
 
+    # TODO: Why is 'if not g.user or not g.csrf.validate_on_submit():' not working here?
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
@@ -252,7 +254,6 @@ def profile():
             return redirect(f'/users/{g.user.id}')
         else:
             edit_form.password.errors.append("Invalid password")
-            return render_template('users/edit.html', form=edit_form)
 
     return render_template('users/edit.html', form=edit_form)
 
@@ -267,6 +268,8 @@ def delete_user():
     if not g.user or not g.csrf.validate_on_submit():
         flash("Access unauthorized.", "danger")
         return redirect("/")
+
+    Message.query.filter_by(user_id = g.user.id).delete()
 
     do_logout()
 
@@ -341,20 +344,19 @@ def homepage():
     - anon users: no messages
     - logged in: 100 most recent messages of self & followed_users
     """
-    if g.user:
-        following_ids = [user.id for user in g.user.following]+[g.user.id]
-
-        messages = (Message
-                    .query
-                    .filter(Message.user_id.in_(following_ids))
-                    .order_by(Message.timestamp.desc())
-                    .limit(100)
-                    .all())
-
-        return render_template('home.html', messages=messages)
-
-    else:
+    if not g.user:
         return render_template('home-anon.html')
+
+    following_ids = [user.id for user in g.user.following]+[g.user.id]
+
+    messages = (Message
+                .query
+                .filter(Message.user_id.in_(following_ids))
+                .order_by(Message.timestamp.desc())
+                .limit(100)
+                .all())
+
+    return render_template('home.html', messages=messages)
 
 
 @app.after_request
