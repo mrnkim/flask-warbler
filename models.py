@@ -107,7 +107,7 @@ class User(db.Model):
 
     messages = db.relationship('Message', backref="user")
 
-    liked_messages = db.relationship('Like', backref="users")
+    # liked_messages = db.relationship('Like', backref="users")
 
 
     followers = db.relationship(
@@ -203,7 +203,7 @@ class Message(db.Model):
         nullable=False
     )
 
-    liked_messages = db.relationship('Like', backref="messages")
+    liked_by = db.relationship('User', secondary='likes', backref="liked_messages")
 
 
 
