@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.exceptions import Unauthorized
 
 from forms import UserAddForm, LoginForm, MessageForm, CSRFForm, UserEditForm
-from models import db, connect_db, User, Message, Follow
+from models import db, connect_db, User, Message, Like
 
 load_dotenv()
 
@@ -335,7 +335,7 @@ def delete_message(message_id):
     return redirect(f"/users/{g.user.id}")
 
 @app.post('/messages/<int:message_id>/like')
-def like_message(message_id):
+def toggle_like_message(message_id):
     """Like a message.
     Check that this message was not written by the current user.
     Fill star on liked message.
@@ -345,8 +345,27 @@ def like_message(message_id):
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    
+    # change star fo filled
+    # add this message to like database
+    # make sure not allowing to like his/her own message
 
+    message = Message.query.get_or_404(message_id)
+
+    if message.user_id == g.user.id:
+        flash("Cannot like your own message.", "danger")
+
+    # liked_message = Like.query.filter_by(
+    #     message_id=message_id, user_id=g.user.id).first()
+
+    if message in g.user.liked_messages:
+        g.user.liked_messages.remove(message)
+        flash("Cannot like a message more than once.", "danger")
+    else:
+        g.user.liked_messages.append(message)
+
+    db.session.commit()
+
+    return redirect(f"/messages/{message_id}")
 
 
 ##############################################################################
