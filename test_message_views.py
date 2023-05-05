@@ -84,18 +84,3 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
 
                 html=resp.get_data(as_text=True)
                 self.assertIn('<!-- FOR TESTING PURPOSES -- HOME-ANON.HTML -->', html)
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
