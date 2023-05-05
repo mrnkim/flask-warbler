@@ -71,3 +71,31 @@ class MessageAddViewTestCase(MessageBaseViewTestCase):
             self.assertEqual(resp.status_code, 302)
 
             Message.query.filter_by(text="Hello").one()
+
+    def test_invalid_user(self):
+        with self.client as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = 1000000
+
+                resp = c.post("/messages/new",
+                              data={"text": "Hello"}, follow_redirects=True)
+
+                self.assertEqual(resp.status_code, 200)
+
+                html=resp.get_data(as_text=True)
+                self.assertIn('<!-- FOR TESTING PURPOSES -- HOME-ANON.HTML -->', html)
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
