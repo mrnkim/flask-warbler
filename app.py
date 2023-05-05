@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.exceptions import Unauthorized
 
 from forms import UserAddForm, LoginForm, MessageForm, CSRFForm, UserEditForm
-from models import db, connect_db, User, Message, Like
+from models import db, connect_db, User, Message, DEFAULT_IMAGE_URL, DEFAULT_HEADER_IMAGE_URL
 
 load_dotenv()
 
@@ -96,7 +96,6 @@ def signup():
     else:
         return render_template('users/signup.html', form=form)
 
-#FIXME: AttributeError: 'bool' object has no attribute 'id'
 @app.route('/login', methods=["GET", "POST"])
 def login():
     """Handle user login and redirect to homepage on success."""
@@ -122,10 +121,7 @@ def login():
 def logout():
     """Handle logout of user and redirect to homepage."""
 
-#FIXME: remove all csrfs, change in .htmls
-#FIXME: if not validated, if not g.user -> refer to line 194~ ("guard")
     if not g.user or not g.csrf.validate_on_submit():
-        # Remove user if present, but no errors if it wasn't
         flash("Access unauthorized.", "danger")
         return redirect('/')
 
@@ -198,9 +194,6 @@ def start_following(follow_id):
     """Add a follow for the currently-logged-in user.
     Redirect to following page for the current for the current user.
     """
-    # TODO: clarify use of CSRF token on functions such as this
-    # csrf = CSRFForm()
-    #FIXME: csrf for all POST requests that don't have form naturally
 
     if not g.user or not g.csrf.validate_on_submit():
         flash("Access unauthorized.", "danger")
@@ -234,7 +227,6 @@ def stop_following(follow_id):
 def show_profile():
     """Update profile for current user."""
 
-    # TODO: Why is 'if not g.user or not g.csrf.validate_on_submit():' not working here?
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
@@ -245,8 +237,8 @@ def show_profile():
         if User.authenticate(g.user.username, edit_form.password.data):
             g.user.username = edit_form.username.data
             g.user.email = edit_form.email.data
-            g.user.image_url = edit_form.image_url.data #TODO: or DEFAULT
-            g.user.header_image_url = edit_form.header_image_url.data #TODO: or DEFAULT
+            g.user.image_url = edit_form.image_url.data or DEFAULT_IMAGE_URL
+            g.user.header_image_url = edit_form.header_image_url.data or DEFAULT_HEADER_IMAGE_URL
             g.user.bio = edit_form.bio.data
 
             db.session.commit()
@@ -327,7 +319,6 @@ def delete_message(message_id):
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    #FIXME: add validation to check if message owner = g.user
     msg = Message.query.get_or_404(message_id)
     db.session.delete(msg)
     db.session.commit()
@@ -345,27 +336,28 @@ def toggle_like_message(message_id):
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    # change star fo filled
-    # add this message to like database
-    # make sure not allowing to like his/her own message
-
     message = Message.query.get_or_404(message_id)
-
-    if message.user_id == g.user.id:
-        flash("Cannot like your own message.", "danger")
-
-    # liked_message = Like.query.filter_by(
-    #     message_id=message_id, user_id=g.user.id).first()
 
     if message in g.user.liked_messages:
         g.user.liked_messages.remove(message)
-        flash("Cannot like a message more than once.", "danger")
     else:
         g.user.liked_messages.append(message)
 
     db.session.commit()
 
-    return redirect(f"/messages/{message_id}")
+    return redirect(f"/")
+
+@app.get('/users/<int:user_id>/likes')
+def show_liked_messages(user_id):
+    """Show liked messages"""
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    user=User.query.get_or_404(user_id)
+#FIXME: Show messages a user liked (not the liked messages that user wrote)
+    return render_template('users/show_liked_messages.html', user=user)
 
 
 ##############################################################################

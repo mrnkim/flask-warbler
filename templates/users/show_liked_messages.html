@@ -3,7 +3,7 @@
 <div class="col-sm-6">
   <ul class="list-group" id="messages">
 
-    {% for msg in user.messages %}
+    {% for msg in user.liked_messages %}
 
     <li class="list-group-item">
       <a href="/messages/{{ msg.id }}" class="message-link"></a>
